@@ -109,36 +109,39 @@ jobs:
     needs: [build-linux, build-windows, bump-version]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
           name: binarize_images_linux
           path: .
+
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: binarize_images_windows
           path: .
-      - name: Checkout code
-        uses: actions/checkout@v4
+
       - name: Fetch tags
         run: git fetch --tags
+
       - name: Get latest tag
         id: get_tag
         run: echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
-      - name: Move artifacts to root
-        run: |
-          ls -lR
-          mv binarize_images_linux/binarize_images_linux.tar.gz .
-          mv binarize_images_windows/binarize_images_windows.tar.gz .
+
+      - name: List files (debug)
+        run: ls -lR
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_tag.outputs.tag }}
           name: Release ${{ steps.get_tag.outputs.tag }}
-          files:
-            binarize_images_windows.tar.gz
+          files: |
             binarize_images_linux.tar.gz
+            binarize_images_windows.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
