@@ -154,6 +154,7 @@ dependencies = [
  "clap",
  "image",
  "imageproc",
+ "rayon",
 ]
 
 [[package]]

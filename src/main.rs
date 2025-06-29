@@ -2,6 +2,7 @@ use clap::Parser;
 use image::{open, GrayImage, ImageBuffer, Luma};
 use imageproc::contrast::equalize_histogram;
 use imageproc::filter::gaussian_blur_f32;
+use rayon::prelude::*;
 use std::path::Path;
 
 #[derive(Parser, Debug)]
@@ -14,18 +15,22 @@ struct Args {
 
 fn adaptive_threshold(image: &GrayImage, radius: f32, weight: f32) -> GrayImage {
     let blurred = gaussian_blur_f32(image, radius);
-    let mut thresholded = ImageBuffer::new(image.width(), image.height());
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            let pixel = image.get_pixel(x, y)[0] as f32;
-            let blurred_pixel = blurred.get_pixel(x, y)[0] as f32;
-            if pixel >= blurred_pixel * (1.0 - weight) {
-                thresholded.put_pixel(x, y, Luma([255]));
+    let (width, height) = image.dimensions();
+    let mut thresholded = ImageBuffer::new(width, height);
+
+    thresholded
+        .enumerate_pixels_mut()
+        .par_bridge()
+        .for_each(|(x, y, pixel)| {
+            let orig = image.get_pixel(x, y)[0] as f32;
+            let blur = blurred.get_pixel(x, y)[0] as f32;
+            *pixel = if orig >= blur * (1.0 - weight) {
+                Luma([255])
             } else {
-                thresholded.put_pixel(x, y, Luma([0]));
-            }
-        }
-    }
+                Luma([0])
+            };
+        });
+
     thresholded
 }
 
