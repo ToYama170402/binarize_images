@@ -1,8 +1,8 @@
 # binarize_images
 
- 画像を二値化するRustプロジェクトです。
+画像を二値化するRustプロジェクトです。
 
- すべてCline書いてもらいました。
+~~すべてCline書いてもらいました。~~Clineにベースを書いてもらってGitHub Copilotと一緒に改善しました。
 
 ## 使い方
 
