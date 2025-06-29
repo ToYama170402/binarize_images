@@ -1,5 +1,5 @@
 use clap::Parser;
-use image::{open, GrayImage, ImageBuffer, Luma};
+use image::{open, GrayImage, ImageBuffer};
 use imageproc::contrast::equalize_histogram;
 use imageproc::filter::gaussian_blur_f32;
 use rayon::prelude::*;
@@ -16,18 +16,21 @@ struct Args {
 fn adaptive_threshold(image: &GrayImage, radius: f32, weight: f32) -> GrayImage {
     let blurred = gaussian_blur_f32(image, radius);
     let (width, height) = image.dimensions();
+    let orig_buf = image.as_raw();
+    let blur_buf = blurred.as_raw();
     let mut thresholded = ImageBuffer::new(width, height);
+    let out_buf = thresholded.as_mut();
 
-    thresholded
-        .enumerate_pixels_mut()
-        .par_bridge()
-        .for_each(|(x, y, pixel)| {
-            let orig = image.get_pixel(x, y)[0] as f32;
-            let blur = blurred.get_pixel(x, y)[0] as f32;
-            *pixel = if orig >= blur * (1.0 - weight) {
-                Luma([255])
+    out_buf
+        .par_iter_mut()
+        .enumerate()
+        .for_each(|(i, out_pixel)| {
+            let orig = orig_buf[i] as f32;
+            let blur = blur_buf[i] as f32;
+            *out_pixel = if orig >= blur * (1.0 - weight) {
+                255
             } else {
-                Luma([0])
+                0
             };
         });
 
