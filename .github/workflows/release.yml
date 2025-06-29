@@ -6,44 +6,70 @@ on:
       - master
 
 jobs:
-  build-and-release:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu,x86_64-pc-windows-gnu
-
+          targets: x86_64-unknown-linux-gnu
       - name: Install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
-
       - name: Build Linux binary
         run: cross build --release --target x86_64-unknown-linux-gnu
-
-      - name: Build Windows binary
-        run: cross build --release --target x86_64-pc-windows-gnu
-
-      - name: Prepare Linux artifact
+      - name: Archive Linux binary
         run: |
           mkdir -p dist
           cp target/x86_64-unknown-linux-gnu/release/* dist/ || true
           cd dist
           tar -czvf ../binarize_images_linux.tar.gz *
           cd ..
-          rm -rf dist
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binarize_images_linux
+          path: binarize_images_linux.tar.gz
 
-      - name: Prepare Windows artifact
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Build Windows binary
+        run: cross build --release --target x86_64-pc-windows-gnu
+      - name: Archive Windows binary
         run: |
           mkdir -p dist
           cp target/x86_64-pc-windows-gnu/release/* dist/ || true
           cd dist
           tar -czvf ../binarize_images_windows.tar.gz *
           cd ..
-          rm -rf dist
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binarize_images_windows
+          path: binarize_images_windows.tar.gz
 
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binarize_images_linux
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binarize_images_windows
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
@@ -52,14 +78,12 @@ jobs:
           name: Release ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload Linux Release Asset
         uses: softprops/action-gh-release@v2
         with:
           files: binarize_images_linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v2
         with:
