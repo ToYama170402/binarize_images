@@ -132,19 +132,8 @@ jobs:
         with:
           tag_name: ${{ steps.get_tag.outputs.tag }}
           name: Release ${{ steps.get_tag.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Linux Release Asset
-        uses: softprops/action-gh-release@v2
-        with:
-          files: binarize_images_linux.tar.gz
-          tag_name: ${{ steps.get_tag.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Windows Release Asset
-        uses: softprops/action-gh-release@v2
-        with:
-          files: binarize_images_windows.tar.gz
-          tag_name: ${{ steps.get_tag.outputs.tag }}
+          files:
+            binarize_images_windows.tar.gz
+            binarize_images_linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
