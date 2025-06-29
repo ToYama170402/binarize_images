@@ -1,6 +1,7 @@
 use clap::Parser;
 use image::{open, GrayImage, ImageBuffer, Luma};
 use imageproc::contrast::equalize_histogram;
+use imageproc::filter::gaussian_blur_f32;
 use std::path::Path;
 
 #[derive(Parser, Debug)]
@@ -11,34 +12,8 @@ struct Args {
     input_paths: Vec<String>,
 }
 
-// Gaussian blur implementation (simplified)
-fn gaussian_blur(image: &GrayImage, radius: u32) -> GrayImage {
-    let mut blurred = ImageBuffer::new(image.width(), image.height());
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            let mut sum = 0.0;
-            let mut weight_sum = 0.0;
-            for i in -((radius as i32) / 2)..=((radius as i32) / 2) {
-                for j in -((radius as i32) / 2)..=((radius as i32) / 2) {
-                    let nx = x as i32 + i;
-                    let ny = y as i32 + j;
-                    if nx >= 0 && nx < image.width() as i32 && ny >= 0 && ny < image.height() as i32
-                    {
-                        let weight = 1.0; // Simplified weight
-                        sum += image.get_pixel(nx as u32, ny as u32)[0] as f32 * weight;
-                        weight_sum += weight;
-                    }
-                }
-            }
-            let value = (sum / weight_sum) as u8;
-            blurred.put_pixel(x, y, Luma([value]));
-        }
-    }
-    blurred
-}
-
-fn adaptive_threshold(image: &GrayImage, radius: u32, weight: f32) -> GrayImage {
-    let blurred = gaussian_blur(image, radius);
+fn adaptive_threshold(image: &GrayImage, radius: f32, weight: f32) -> GrayImage {
+    let blurred = gaussian_blur_f32(image, radius);
     let mut thresholded = ImageBuffer::new(image.width(), image.height());
     for y in 0..image.height() {
         for x in 0..image.width() {
@@ -64,7 +39,7 @@ fn main() -> Result<(), image::ImageError> {
         equalize_histogram(&mut img);
 
         // Apply Sauvola's thresholding
-        let thresholded = adaptive_threshold(&img, 11, 0.02);
+        let thresholded = adaptive_threshold(&img, 11.0, 0.05);
 
         // Save the thresholded image
         let input_path_obj = Path::new(&input_path);
