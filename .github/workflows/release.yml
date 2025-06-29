@@ -1,0 +1,68 @@
+name: Release Build and Upload
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu,x86_64-pc-windows-gnu
+
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build Linux binary
+        run: cross build --release --target x86_64-unknown-linux-gnu
+
+      - name: Build Windows binary
+        run: cross build --release --target x86_64-pc-windows-gnu
+
+      - name: Prepare Linux artifact
+        run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/* dist/ || true
+          cd dist
+          tar -czvf ../binarize_images_linux.tar.gz *
+          cd ..
+          rm -rf dist
+
+      - name: Prepare Windows artifact
+        run: |
+          mkdir -p dist
+          cp target/x86_64-pc-windows-gnu/release/* dist/ || true
+          cd dist
+          tar -czvf ../binarize_images_windows.tar.gz *
+          cd ..
+          rm -rf dist
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.sha }}
+          name: Release ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binarize_images_linux.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binarize_images_windows.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
