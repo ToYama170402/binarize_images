@@ -40,25 +40,51 @@ fn adaptive_threshold(image: &GrayImage, radius: f32, weight: f32) -> GrayImage 
 fn main() -> Result<(), image::ImageError> {
     let args = Args::parse();
 
-    args.input_paths.par_iter().try_for_each(|input_path| -> Result<(), image::ImageError> {
-        let mut img = open(input_path)?.to_luma8();
+    args.input_paths
+        .par_iter()
+        .try_for_each(|input_path| -> Result<(), image::ImageError> {
+            let mut img = open(input_path)?.to_luma8();
 
-        // Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
-        equalize_histogram(&mut img);
+            // Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            equalize_histogram(&mut img);
 
-        // Apply Sauvola's thresholding
-        let thresholded = adaptive_threshold(&img, 11.0, 0.05);
+            // radius: 画像の短辺/30、weight: 標準偏差から決定
+            let (width, height) = img.dimensions();
+            let min_side = width.min(height) as f32;
+            let radius = (min_side / 30.0).max(5.0).min(30.0); // 5～30の範囲に制限
+            let mean =
+                img.as_raw().iter().map(|&v| v as f32).sum::<f32>() / (width * height) as f32;
+            let stddev = (img
+                .as_raw()
+                .iter()
+                .map(|&v| {
+                    let diff = v as f32 - mean;
+                    diff * diff
+                })
+                .sum::<f32>()
+                / (width * height) as f32)
+                .sqrt();
+            let weight = if stddev < 30.0 {
+                0.12
+            } else if stddev < 60.0 {
+                0.08
+            } else {
+                0.05
+            };
 
-        // Save the thresholded image
-        let input_path_obj = Path::new(input_path);
-        let parent_dir = input_path_obj.parent().unwrap();
-        let file_stem = input_path_obj.file_stem().unwrap().to_str().unwrap();
-        let output_path = parent_dir.join(format!("{}_thresholded.png", file_stem));
-        thresholded.save(output_path)?;
+            // Apply Sauvola's thresholding
+            let thresholded = adaptive_threshold(&img, radius, weight);
 
-        println!("Processed: {}", input_path);
-        Ok::<(), image::ImageError>(())
-    })?;
+            // Save the thresholded image
+            let input_path_obj = Path::new(input_path);
+            let parent_dir = input_path_obj.parent().unwrap();
+            let file_stem = input_path_obj.file_stem().unwrap().to_str().unwrap();
+            let output_path = parent_dir.join(format!("{}_thresholded.png", file_stem));
+            thresholded.save(output_path)?;
+
+            println!("Processed: {}", input_path);
+            Ok::<(), image::ImageError>(())
+        })?;
 
     Ok(())
 }
