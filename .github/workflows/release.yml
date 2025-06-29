@@ -113,10 +113,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: binarize_images_linux
+          path: .
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: binarize_images_windows
+          path: .
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Fetch tags
