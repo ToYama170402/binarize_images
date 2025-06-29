@@ -48,22 +48,20 @@ fn main() -> Result<(), image::ImageError> {
             // Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
             equalize_histogram(&mut img);
 
-            // radius: 画像の短辺/30、weight: 標準偏差から決定
+            // mean, stddevを1回のイテレーションで計算
             let (width, height) = img.dimensions();
             let min_side = width.min(height) as f32;
+            let mut sum = 0.0f32;
+            let mut sum_sq = 0.0f32;
+            for &v in img.as_raw() {
+                let fv = v as f32;
+                sum += fv;
+                sum_sq += fv * fv;
+            }
+            let npix = (width * height) as f32;
+            let mean = sum / npix;
+            let stddev = (sum_sq / npix - mean * mean).sqrt();
             let radius = (min_side / 30.0).max(5.0).min(30.0); // 5～30の範囲に制限
-            let mean =
-                img.as_raw().iter().map(|&v| v as f32).sum::<f32>() / (width * height) as f32;
-            let stddev = (img
-                .as_raw()
-                .iter()
-                .map(|&v| {
-                    let diff = v as f32 - mean;
-                    diff * diff
-                })
-                .sum::<f32>()
-                / (width * height) as f32)
-                .sqrt();
             let weight = if stddev < 30.0 {
                 0.12
             } else if stddev < 60.0 {
