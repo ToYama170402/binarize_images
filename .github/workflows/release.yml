@@ -2,8 +2,8 @@ name: Release Build and Upload
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - 'v*'
 
 jobs:
   build-linux:
