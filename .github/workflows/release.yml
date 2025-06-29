@@ -128,6 +128,7 @@ jobs:
         run: echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
       - name: Move artifacts to root
         run: |
+          ls -lR
           mv binarize_images_linux/binarize_images_linux.tar.gz .
           mv binarize_images_windows/binarize_images_windows.tar.gz .
       - name: Create Release
