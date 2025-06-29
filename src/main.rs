@@ -40,8 +40,8 @@ fn adaptive_threshold(image: &GrayImage, radius: f32, weight: f32) -> GrayImage 
 fn main() -> Result<(), image::ImageError> {
     let args = Args::parse();
 
-    for input_path in args.input_paths {
-        let mut img = open(&input_path)?.to_luma8();
+    args.input_paths.par_iter().try_for_each(|input_path| -> Result<(), image::ImageError> {
+        let mut img = open(input_path)?.to_luma8();
 
         // Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
         equalize_histogram(&mut img);
@@ -50,14 +50,15 @@ fn main() -> Result<(), image::ImageError> {
         let thresholded = adaptive_threshold(&img, 11.0, 0.05);
 
         // Save the thresholded image
-        let input_path_obj = Path::new(&input_path);
+        let input_path_obj = Path::new(input_path);
         let parent_dir = input_path_obj.parent().unwrap();
         let file_stem = input_path_obj.file_stem().unwrap().to_str().unwrap();
         let output_path = parent_dir.join(format!("{}_thresholded.png", file_stem));
         thresholded.save(output_path)?;
 
         println!("Processed: {}", input_path);
-    }
+        Ok::<(), image::ImageError>(())
+    })?;
 
     Ok(())
 }
